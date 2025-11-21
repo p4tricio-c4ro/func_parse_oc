@@ -1,6 +1,5 @@
 # Docs for the Azure Web Apps Deploy action: https://github.com/azure/functions-action
-# More GitHub Actions for Azure: https://github.com/Azure/actions
-# More info on Python, GitHub Actions, and Azure Functions: https://aka.ms/python-webapps-actions
+# More GitHub Actions for Azure: https://aka.ms/python-webapps-actions
 
 name: Build and deploy Python project to Azure Function App - va-oc-parser-pc02
 
@@ -11,14 +10,14 @@ on:
   workflow_dispatch:
 
 env:
-  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.'   # ruta del proyecto (raíz del repo)
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.'   # Ruta al proyecto (raíz del repo)
   PYTHON_VERSION: '3.11'
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read  # requerido para actions/checkout
+      contents: read    # requerido para actions/checkout
 
     steps:
       - name: Checkout repository
@@ -29,16 +28,13 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      # >>> PASO CLAVE: instalar dependencias dentro de .python_packages <<<
-      - name: Install dependencies into .python_packages
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt --target=".python_packages/lib/site-packages"
+      # OJO: aquí YA NO instalamos dependencias en .python_packages.
+      # Solo empaquetamos el código fuente + requirements.txt.
 
-      # Zip de TODO el proyecto, excluyendo un posible venv local
       - name: Zip artifact for deployment
         run: |
-          zip -r release.zip . -x "venv/*"
+          zip -r release.zip . \
+            -x "venv/*" ".git/*" ".github/*" "__pycache__/*"
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
@@ -69,3 +65,5 @@ jobs:
           slot-name: 'staging'
           package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_64677DDB0C984750AD17B3761FB09E77 }}
+          scm-do-build-during-deployment: true
+          enable-oryx-build: true
