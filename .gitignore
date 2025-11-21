@@ -5,3 +5,6 @@ __pycache__/
 .local
 .DS_Store
 app.zip
+.python_packages/
+venv/
+.venv/
