@@ -1,6 +1,3 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/azure/functions-action
-# More GitHub Actions for Azure: https://github.com/Azure/actions
-
 name: Build and deploy Python project to Azure Function App - va-oc-parser-pc02
 
 on:
@@ -10,39 +7,35 @@ on:
   workflow_dispatch:
 
 env:
-  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.'      # raíz del proyecto
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.'        # raíz del proyecto (host.json, requirements.txt, etc.)
   PYTHON_VERSION: '3.11'
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read   # requerido para actions/checkout
+      contents: read
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Python version
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      # IMPORTANTE: instalar dependencias donde Azure las busca
-      - name: Install dependencies into .python_packages
-        shell: bash
+      # Esta instalación es SOLO para poder correr tests locales en el job si quisieras.
+      # No se empaqueta el venv ni .python_packages en el ZIP.
+      - name: Install dependencies (for tests only)
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt --target=".python_packages/lib/site-packages"
+          pip install -r requirements.txt
 
-      # Ya no necesitamos venv para el despliegue, así que lo omitimos
-
-      # OJO: este zip ahora SÍ incluye carpetas ocultas (.python_packages)
-      - name: Zip artifact for deployment
-        shell: bash
+      - name: Zip artifact for deployment (solo código y requirements.txt)
         run: |
           zip -r release.zip . \
-            -x "venv/*" ".git/*" ".github/*" "__pycache__/*" "*.pyc"
+            -x "venv/*" ".venv/*" "__pycache__/*" "*.pyc" ".git/*" ".github/*" ".python_packages/*"
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
@@ -65,7 +58,7 @@ jobs:
           unzip release.zip
           rm release.zip
 
-      - name: Deploy to Azure Functions
+      - name: Deploy to Azure Functions (con Oryx build)
         uses: Azure/functions-action@v1
         id: deploy-to-function
         with:
@@ -73,3 +66,4 @@ jobs:
           slot-name: 'staging'
           package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_64677DDB0C984750AD17B3761FB09E77 }}
+          enable-oryx-build: true
